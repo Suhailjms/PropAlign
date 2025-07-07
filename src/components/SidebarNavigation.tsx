@@ -17,7 +17,8 @@ import {
   LayoutDashboard,
   LifeBuoy,
   Settings,
-  Users
+  Users,
+  ClipboardList
 } from "lucide-react";
 import ProposerAILogo from "./ProposerAILogo";
 import { cn } from "@/lib/utils";
@@ -64,14 +65,24 @@ export function SidebarNavigation() {
             </SidebarMenuButton>
           </SidebarMenuItem>
           {user?.role === 'Admin' && (
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname.startsWith('/admin')} tooltip={{children: "User Management"}}>
-                <Link href="/admin/users">
-                  <Users />
-                  <span className="group-data-[collapsible=icon]:hidden">Users</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            <>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname.startsWith('/admin/users')} tooltip={{children: "User Management"}}>
+                  <Link href="/admin/users">
+                    <Users />
+                    <span className="group-data-[collapsible=icon]:hidden">Users</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname.startsWith('/admin/logs')} tooltip={{children: "Audit Logs"}}>
+                  <Link href="/admin/logs">
+                    <ClipboardList />
+                    <span className="group-data-[collapsible=icon]:hidden">Audit Logs</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </>
           )}
         </SidebarMenu>
       </SidebarContent>

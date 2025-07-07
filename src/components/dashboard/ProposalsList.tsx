@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -19,8 +18,6 @@ import type { Proposal } from "@/lib/types";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function ProposalsList({ proposals, title="Active Proposals", description="A list of proposals currently in the pipeline." }: { proposals: Proposal[], title?: string, description?: string }) {
-  // Filter out terminal statuses like 'Won' or 'Lost' to show only active proposals.
-  const activeProposals = proposals.filter(p => p.status !== 'Won' && p.status !== 'Lost');
   const { user } = useAuth();
   
   return (
@@ -43,7 +40,7 @@ export default function ProposalsList({ proposals, title="Active Proposals", des
             </TableRow>
           </TableHeader>
           <TableBody>
-            {activeProposals.map((proposal) => {
+            {proposals.map((proposal) => {
               const canDelete = user?.role === 'Admin';
               const canEdit = user && ['Admin', 'Approver', 'Manager', 'Editor'].includes(user.role);
 
@@ -61,6 +58,8 @@ export default function ProposalsList({ proposals, title="Active Proposals", des
                         proposal.status === 'In Revision' ? 'border-orange-500/50 bg-orange-500/10 text-orange-700 dark:text-orange-400' :
                         proposal.status === 'Approved' ? 'border-green-500/50 bg-green-500/10 text-green-700 dark:text-green-400' :
                         proposal.status === 'Submitted' ? 'border-blue-500/50 bg-blue-500/10 text-blue-700 dark:text-blue-400' :
+                        proposal.status === 'Won' ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' :
+                        proposal.status === 'Lost' ? 'border-red-500/50 bg-red-500/10 text-red-700 dark:text-red-400' :
                         ''
                     }>
                     {proposal.status}

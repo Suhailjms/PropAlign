@@ -1,7 +1,8 @@
+
 // This is a simple in-memory store to simulate a database for the demo.
 // Data will reset on server restart.
 
-import type { Proposal, Template, AccessRole, TeamMember, Invitation, StorableUser } from './types';
+import type { Proposal, Template, AccessRole, TeamMember, Invitation, StorableUser, AuditLog, ProposalPriority } from './types';
 import { proposals as initialProposals, templates as initialTemplates, users as initialUsers } from './data';
 
 class InMemoryStore {
@@ -9,20 +10,40 @@ class InMemoryStore {
     private templates: Template[];
     private invitations: Invitation[];
     private users: StorableUser[];
+    private auditLogs: AuditLog[];
 
     constructor() {
         this.proposals = JSON.parse(JSON.stringify(initialProposals));
         this.templates = JSON.parse(JSON.stringify(initialTemplates));
         this.users = JSON.parse(JSON.stringify(initialUsers));
         this.invitations = [];
+        this.auditLogs = [];
+        this.logAction('system', 'System Initialized');
     }
+
+    // Audit Log Methods
+    logAction(userEmail: string, action: string, details?: string) {
+        const log: AuditLog = {
+            id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            userEmail,
+            action,
+            details,
+            timestamp: new Date().toISOString(),
+        };
+        this.auditLogs.unshift(log);
+    }
+
+    getAuditLogs(): AuditLog[] {
+        return this.auditLogs;
+    }
+
 
     // User Methods
     getUserByEmail(email: string): StorableUser | undefined {
         return this.users.find(u => u.email.toLowerCase() === email.toLowerCase());
     }
 
-    addUser(data: Omit<StorableUser, 'id' | 'avatarUrl'>): StorableUser {
+    addUser(data: Omit<StorableUser, 'id' | 'avatarUrl' | 'mfaEnabled'>): StorableUser {
         if (data.role === 'Admin') {
             const adminCount = this.users.filter(u => u.role === 'Admin').length;
             if (adminCount >= 2) {
@@ -38,10 +59,22 @@ class InMemoryStore {
         const newUser: StorableUser = {
             id: `user-${Date.now()}`,
             ...data,
-            avatarUrl: `https://placehold.co/40x40.png`
+            avatarUrl: `https://placehold.co/40x40.png`,
+            mfaEnabled: false,
         };
         this.users.push(newUser);
+        this.logAction('admin', 'User Created', `User: ${data.email}, Role: ${data.role}`);
         return newUser;
+    }
+    
+    enableMfa(email: string): StorableUser | undefined {
+        const user = this.getUserByEmail(email);
+        if (user) {
+            user.mfaEnabled = true;
+            this.logAction(email, 'MFA Enabled');
+            return user;
+        }
+        return undefined;
     }
 
 
@@ -67,7 +100,10 @@ class InMemoryStore {
         objective: string;
         solutionType: string;
         content: string;
+        ownerEmail: string;
+        priority: ProposalPriority;
     }): Proposal {
+        const ownerUser = this.getUserByEmail(data.ownerEmail);
         const newProposal: Proposal = {
             id: `PROP-${String(this.proposals.length + 1).padStart(3, '0')}`,
             title: data.title,
@@ -79,12 +115,15 @@ class InMemoryStore {
             solutionType: data.solutionType,
             content: data.content,
             status: 'Draft',
+            priority: data.priority,
             progress: 10,
             lastUpdated: 'Just now',
-            owner: 'Alex Smith', // Placeholder owner
+            owner: ownerUser?.name || 'Unknown User',
+            ownerEmail: data.ownerEmail,
             team: [],
         };
         this.proposals.unshift(newProposal); // Add to the top of the list
+        this.logAction(data.ownerEmail, 'Proposal Created', `Proposal ID: ${newProposal.id}, Title: ${newProposal.title}`);
         return newProposal;
     }
     
@@ -105,7 +144,7 @@ class InMemoryStore {
     }
 
     // Invitation and Access Methods
-    createInvitation(proposalId: string, email: string, role: AccessRole): Invitation {
+    createInvitation(proposalId: string, email: string, role: AccessRole, inviterEmail: string): Invitation {
         const proposal = this.getProposalById(proposalId);
         if (!proposal) {
             throw new Error(`Proposal with id ${proposalId} not found.`);
@@ -131,6 +170,7 @@ class InMemoryStore {
         };
 
         this.invitations.push(newInvitation);
+        this.logAction(inviterEmail, 'Proposal Shared', `Invited ${email} as ${role} to proposal ${proposalId}`);
         return newInvitation;
     }
 
@@ -149,6 +189,7 @@ class InMemoryStore {
         
         if (proposal) {
             this.invitations[invitationIndex].status = 'accepted';
+            this.logAction(invitation.email, 'Accepted Invite', `Joined proposal ${invitation.proposalId} as ${invitation.role}`);
         }
 
         return proposal;
@@ -182,7 +223,7 @@ class InMemoryStore {
         return proposal;
     }
 
-    revokeAccess(proposalId: string, email: string): Proposal | undefined {
+    revokeAccess(proposalId: string, email: string, revokerEmail: string): Proposal | undefined {
         const proposalIndex = this.proposals.findIndex(p => p.id === proposalId);
         if (proposalIndex === -1) {
             throw new Error(`Proposal with id ${proposalId} not found.`);
@@ -193,6 +234,7 @@ class InMemoryStore {
         
         proposal.lastUpdated = 'Just now';
         this.proposals[proposalIndex] = proposal;
+        this.logAction(revokerEmail, 'Access Revoked', `Removed ${email} from proposal ${proposalId}`);
         return proposal;
     }
 
@@ -201,23 +243,10 @@ class InMemoryStore {
     }
 }
 
+const globalForStore = global as unknown as { store?: InMemoryStore };
 
-// This ensures that in a development environment, we use a single, persistent
-// instance of the store across hot reloads. In a real application, this would
-// be a database connection.
-declare global {
-  var __store: InMemoryStore | undefined
-}
+export const store = globalForStore.store ?? new InMemoryStore();
 
-let store: InMemoryStore;
-
-if (process.env.NODE_ENV === 'production') {
-  store = new InMemoryStore();
-} else {
-  if (!global.__store) {
-    global.__store = new InMemoryStore();
-  }
-  store = global.__store;
-}
+if (process.env.NODE_ENV !== 'production') globalForStore.store = store;
 
 export default store;

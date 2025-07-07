@@ -6,13 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useState, useEffect, useActionState } from "react";
+import { useState, useEffect, useActionState, type KeyboardEvent } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { aiDraftProposal } from "@/ai/flows/ai-draft-proposal";
 import { Loader2 } from "lucide-react";
 import store from "@/lib/store";
 import { createProposal, type CreateProposalState } from "@/lib/actions";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function NewProposalPage() {
@@ -25,7 +26,7 @@ export default function NewProposalPage() {
     const [draftContent, setDraftContent] = useState("");
     
     const initialState: CreateProposalState = { message: null, errors: {} };
-    const [state, dispatch] = useActionState(createProposal, initialState);
+    const [formState, formAction, isPending] = useActionState(createProposal, initialState);
 
     useEffect(() => {
         if (user && !['Admin', 'Approver', 'Manager', 'Editor'].includes(user.role)) {
@@ -52,6 +53,16 @@ export default function NewProposalPage() {
         }
     }, [searchParams, toast]);
     
+    const handleKeyDown = (event: KeyboardEvent<HTMLFormElement>) => {
+        if (event.key === 'Enter' && (event.target as HTMLElement).tagName !== 'TEXTAREA' && !event.nativeEvent.isComposing) {
+            event.preventDefault();
+            if (isPending) {
+                return;
+            }
+            event.currentTarget.requestSubmit();
+        }
+    };
+
     async function handleGenerateDraft(e: React.MouseEvent<HTMLButtonElement>) {
         e.preventDefault();
         const form = e.currentTarget.form;
@@ -103,37 +114,52 @@ export default function NewProposalPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <form action={dispatch} className="space-y-6">
+                    <form action={formAction} onKeyDown={handleKeyDown} className="space-y-6">
+                        <input type="hidden" name="ownerEmail" value={user?.email} />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
                                 <Label htmlFor="title">Proposal Title <span className="text-destructive">*</span></Label>
                                 <Input id="title" name="title" placeholder="e.g. Project Phoenix" required />
-                                {state.errors?.title && <p className="text-sm font-medium text-destructive">{state.errors.title}</p>}
+                                {formState.errors?.title && <p className="text-sm font-medium text-destructive">{formState.errors.title}</p>}
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="clientName">Client Name <span className="text-destructive">*</span></Label>
                                 <Input id="clientName" name="clientName" placeholder="e.g. Innovate Corp" required />
-                                {state.errors?.clientName && <p className="text-sm font-medium text-destructive">{state.errors.clientName}</p>}
+                                {formState.errors?.clientName && <p className="text-sm font-medium text-destructive">{formState.errors.clientName}</p>}
                             </div>
                              <div className="space-y-2">
                                 <Label htmlFor="value">Proposal Value ($) <span className="text-destructive">*</span></Label>
                                 <Input id="value" name="value" type="number" placeholder="e.g. 150000" required />
-                                {state.errors?.value && <p className="text-sm font-medium text-destructive">{state.errors.value}</p>}
+                                {formState.errors?.value && <p className="text-sm font-medium text-destructive">{formState.errors.value}</p>}
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="priority">Priority <span className="text-destructive">*</span></Label>
+                                <Select name="priority" defaultValue="Medium" required>
+                                    <SelectTrigger id="priority">
+                                        <SelectValue placeholder="Select a priority" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="High">High</SelectItem>
+                                        <SelectItem value="Medium">Medium</SelectItem>
+                                        <SelectItem value="Low">Low</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                {formState.errors?.priority && <p className="text-sm font-medium text-destructive">{formState.errors.priority}</p>}
                             </div>
                              <div className="space-y-2">
                                 <Label htmlFor="industry">Industry <span className="text-destructive">*</span></Label>
                                 <Input id="industry" name="industry" placeholder="e.g. Technology" required />
-                                {state.errors?.industry && <p className="text-sm font-medium text-destructive">{state.errors.industry}</p>}
+                                {formState.errors?.industry && <p className="text-sm font-medium text-destructive">{formState.errors.industry}</p>}
                             </div>
                              <div className="space-y-2">
                                 <Label htmlFor="solutionType">Solution Type <span className="text-destructive">*</span></Label>
                                 <Input id="solutionType" name="solutionType" placeholder="e.g. Cloud Migration" required />
-                                {state.errors?.solutionType && <p className="text-sm font-medium text-destructive">{state.errors.solutionType}</p>}
+                                {formState.errors?.solutionType && <p className="text-sm font-medium text-destructive">{formState.errors.solutionType}</p>}
                             </div>
-                             <div className="space-y-2">
+                             <div className="space-y-2 md:col-span-2">
                                 <Label htmlFor="region">Region <span className="text-destructive">*</span></Label>
                                 <Input id="region" name="region" placeholder="e.g. North America" required />
-                                {state.errors?.region && <p className="text-sm font-medium text-destructive">{state.errors.region}</p>}
+                                {formState.errors?.region && <p className="text-sm font-medium text-destructive">{formState.errors.region}</p>}
                             </div>
                         </div>
                         
@@ -146,15 +172,18 @@ export default function NewProposalPage() {
                                 className="resize-y min-h-[100px]"
                                 required
                             />
-                            {state.errors?.clientNeeds && <p className="text-sm font-medium text-destructive">{state.errors.clientNeeds}</p>}
+                            {formState.errors?.clientNeeds && <p className="text-sm font-medium text-destructive">{formState.errors.clientNeeds}</p>}
                         </div>
 
                         <div className="flex items-center gap-4">
-                            <Button type="button" variant="outline" onClick={handleGenerateDraft} disabled={loading}>
+                            <Button type="button" variant="outline" onClick={handleGenerateDraft} disabled={loading || isPending}>
                                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                 {loading ? "Generating..." : "Generate Draft with AI"}
                             </Button>
-                            <Button type="submit">Create Proposal</Button>
+                            <Button type="submit" disabled={isPending}>
+                                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                {isPending ? "Creating..." : "Create Proposal"}
+                            </Button>
                         </div>
 
                          {draftContent && (
@@ -171,7 +200,7 @@ export default function NewProposalPage() {
                                 />
                             </div>
                         )}
-                        {state.message && <p className="text-sm font-medium text-destructive mt-4">{state.message}</p>}
+                        {formState.message && <p className="text-sm font-medium text-destructive mt-4">{formState.message}</p>}
                     </form>
                 </CardContent>
             </Card>

@@ -4,9 +4,9 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Save, Share2, MessageSquare, History, Send, CheckCircle, Loader2, ThumbsUp, XCircle, Info } from "lucide-react";
+import { Save, Share2, MessageSquare, History, Send, CheckCircle, Loader2, ThumbsUp, XCircle, Info, Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import AISidebar from "@/components/workspace/AISidebar";
 import { useToast } from "@/hooks/use-toast";
@@ -14,9 +14,12 @@ import { updateProposalStatus } from "@/lib/actions";
 import type { Proposal, ProposalStatus, AccessRole, Invitation } from "@/lib/types";
 import ShareProposalDialog from "@/components/workspace/ShareProposalDialog";
 import { useAuth } from "@/hooks/useAuth";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 type SaveStatus = 'unsaved' | 'saving' | 'saved';
+type VerificationStatus = 'idle' | 'prompting' | 'verified';
 
 export default function ProposalWorkspace({ initialProposal, initialInvitations }: { initialProposal: Proposal, initialInvitations: Invitation[] }) {
     const router = useRouter();
@@ -29,6 +32,44 @@ export default function ProposalWorkspace({ initialProposal, initialInvitations 
     const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
     const [isUpdating, setIsUpdating] = useState(false);
 
+    const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>('idle');
+    const [mfaCode, setMfaCode] = useState('');
+    const [isVerifying, setIsVerifying] = useState(false);
+
+    useEffect(() => {
+        if (!user || !proposal.ownerEmail) {
+            setVerificationStatus('idle');
+            return;
+        }
+        if (user.email === proposal.ownerEmail) {
+            setVerificationStatus('verified');
+        } else {
+            setVerificationStatus('prompting');
+        }
+    }, [user, proposal.ownerEmail]);
+
+    const handleMfaVerification = (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsVerifying(true);
+        // Simulating MFA check
+        setTimeout(() => {
+            if (mfaCode === '123456') {
+                setVerificationStatus('verified');
+                toast({
+                    title: "Access Granted",
+                    description: "You have securely accessed the proposal.",
+                });
+            } else {
+                toast({
+                    variant: "destructive",
+                    title: "Verification Failed",
+                    description: "The one-time code is incorrect.",
+                });
+            }
+            setIsVerifying(false);
+        }, 1000);
+    };
+
     const currentUserRole: AccessRole = user?.role ?? 'Viewer';
 
     // Permissions
@@ -39,11 +80,10 @@ export default function ProposalWorkspace({ initialProposal, initialInvitations 
     const canSubmitForReview = ['Admin', 'Manager', 'Editor'].includes(currentUserRole);
     const canRequestRevision = hasApprovalRole && !isSubmitter;
     const canApprove = hasApprovalRole && !isSubmitter;
-    const canMarkAsSubmitted = ['Admin', 'Manager', 'Editor'].includes(currentUserRole);
     const canShare = currentUserRole === 'Admin';
     const canUseAI = currentUserRole !== 'Viewer';
+    const canMarkAsSubmitted = user && ['Admin', 'Manager', 'Editor'].includes(user.role);
 
-    // Effect to sync state if props change (e.g., after router.refresh)
     useEffect(() => {
         setProposal(initialProposal);
         setContent(initialProposal.content || '');
@@ -51,12 +91,10 @@ export default function ProposalWorkspace({ initialProposal, initialInvitations 
         setIsUpdating(false);
     }, [initialProposal, initialInvitations]);
     
-    // Effect for autosave simulation
     useEffect(() => {
         if (saveStatus === 'unsaved') {
             const timer = setTimeout(() => {
                 setSaveStatus('saving');
-                // In a real app, this would be a server action to save content
                 setTimeout(() => {
                     setSaveStatus('saved');
                 }, 1500);
@@ -86,7 +124,6 @@ export default function ProposalWorkspace({ initialProposal, initialInvitations 
                 title: "Status Updated",
                 description: `Proposal moved to "${newStatus}".`,
             });
-            // router.refresh() will refetch data on the server and re-render the page
             router.refresh();
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
@@ -112,6 +149,53 @@ export default function ProposalWorkspace({ initialProposal, initialInvitations 
         }
     };
 
+    if (verificationStatus === 'idle') {
+        return (
+            <main className="flex h-full w-full items-center justify-center p-4 md:p-6">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </main>
+        );
+    }
+
+    if (verificationStatus === 'prompting') {
+        return (
+            <main className="flex items-center justify-center min-h-[calc(100vh-10rem)] bg-background p-4 md:p-6">
+                <Card className="w-full max-w-sm">
+                    <CardHeader className="text-center">
+                        <div className="mx-auto bg-primary/10 p-3 rounded-full w-fit">
+                            <Shield className="w-8 h-8 text-primary" />
+                        </div>
+                        <CardTitle className="text-2xl pt-4">Verification Required</CardTitle>
+                        <CardDescription>
+                            To access this proposal, please complete the additional security step. The simulated code is <strong>123456</strong>.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <form onSubmit={handleMfaVerification} className="grid gap-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="mfa-code">6-Digit Code</Label>
+                                <Input
+                                    id="mfa-code"
+                                    type="text"
+                                    inputMode="numeric"
+                                    pattern="[0-9]{6}"
+                                    value={mfaCode}
+                                    onChange={(e) => setMfaCode(e.target.value)}
+                                    required
+                                    disabled={isVerifying}
+                                />
+                            </div>
+                            <Button type="submit" className="w-full" disabled={isVerifying}>
+                                {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Verify
+                            </Button>
+                        </form>
+                    </CardContent>
+                </Card>
+            </main>
+        );
+    }
+
     return (
         <main className="flex-1 p-4 md:p-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -120,21 +204,32 @@ export default function ProposalWorkspace({ initialProposal, initialInvitations 
                         <CardHeader>
                             <div className="flex flex-wrap items-center justify-between gap-4">
                                 <div>
-                                     <Badge 
-                                        variant="outline" 
-                                        className={
-                                            `mb-2 ${
-                                            proposal.status === 'In Review' ? 'border-yellow-500/50 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400' :
-                                            proposal.status === 'In Revision' ? 'border-orange-500/50 bg-orange-500/10 text-orange-700 dark:text-orange-400' :
-                                            proposal.status === 'Approved' ? 'border-green-500/50 bg-green-500/10 text-green-700 dark:text-green-400' :
-                                            proposal.status === 'Submitted' ? 'border-blue-500/50 bg-blue-500/10 text-blue-700 dark:text-blue-400' :
-                                            ''
-                                            }`
-                                        }>
-                                        {proposal.status}
-                                    </Badge>
+                                    <div className="flex items-center gap-2 mb-2">
+                                         <Badge 
+                                            variant="outline" 
+                                            className={
+                                                `${
+                                                proposal.status === 'In Review' ? 'border-yellow-500/50 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400' :
+                                                proposal.status === 'In Revision' ? 'border-orange-500/50 bg-orange-500/10 text-orange-700 dark:text-orange-400' :
+                                                proposal.status === 'Approved' ? 'border-green-500/50 bg-green-500/10 text-green-700 dark:text-green-400' :
+                                                proposal.status === 'Submitted' ? 'border-blue-500/50 bg-blue-500/10 text-blue-700 dark:text-blue-400' :
+                                                ''
+                                                }`
+                                            }>
+                                            {proposal.status}
+                                        </Badge>
+                                        <Badge
+                                            variant="outline"
+                                            className={
+                                                proposal.priority === 'High' ? 'border-red-500/50 bg-red-500/10 text-red-700 dark:text-red-400' :
+                                                proposal.priority === 'Medium' ? 'border-yellow-500/50 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400' :
+                                                'border-gray-500/50 bg-gray-500/10 text-gray-700 dark:text-gray-400'
+                                            }>
+                                            {proposal.priority} Priority
+                                        </Badge>
+                                    </div>
                                     <CardTitle className="text-2xl font-bold font-headline">{proposal.title}</CardTitle>
-                                    <CardDescription>Client: {proposal.client}</CardDescription>
+                                    <CardDescription>Client: {proposal.client} &bull; Owner: {proposal.owner}</CardDescription>
                                 </div>
                                 <div className="flex items-center gap-2 flex-wrap">
                                     {canEdit && <SaveStatusIndicator />}

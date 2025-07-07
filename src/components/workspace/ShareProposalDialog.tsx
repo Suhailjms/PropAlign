@@ -72,9 +72,10 @@ export default function ShareProposalDialog({ children, proposal, invitations }:
   }, [state, toast, router]);
 
   const handleRemoveAccess = (email: string) => {
+    if (!user) return;
     startRemoveTransition(async () => {
         try {
-            await revokeProposalAccess(proposal.id, email);
+            await revokeProposalAccess(proposal.id, email, user.email);
             toast({
                 title: "Access Revoked",
                 description: `Access for ${email} has been successfully revoked.`,
@@ -127,6 +128,7 @@ export default function ShareProposalDialog({ children, proposal, invitations }:
         {canManage ? (
             <form action={formAction} ref={formRef} className="space-y-4">
                 <input type="hidden" name="proposalId" value={proposal.id} />
+                <input type="hidden" name="inviterEmail" value={user?.email} />
                 <div className="grid grid-cols-3 items-center gap-4">
                     <div className="col-span-2">
                         <Label htmlFor="email" className="sr-only">Email</Label>

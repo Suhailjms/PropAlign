@@ -1,6 +1,7 @@
 
 export type ProposalStatus = 'Draft' | 'In Review' | 'In Revision' | 'Approved' | 'Submitted' | 'Won' | 'Lost';
 export type AccessRole = 'Viewer' | 'Editor' | 'Reviewer' | 'Manager' | 'Admin' | 'Approver';
+export type ProposalPriority = 'High' | 'Medium' | 'Low';
 
 export interface TeamMember {
   name: string;
@@ -16,6 +17,7 @@ export interface StorableUser {
   role: AccessRole;
   password_bcrypt_hash: string; // Plain text for simulation purposes
   avatarUrl: string;
+  mfaEnabled: boolean;
 }
 
 export interface Proposal {
@@ -23,6 +25,7 @@ export interface Proposal {
   title: string;
   client: string;
   status: ProposalStatus;
+  priority: ProposalPriority;
   progress: number;
   lastUpdated: string;
   team: TeamMember[];
@@ -32,6 +35,7 @@ export interface Proposal {
   value: number;
   region: string;
   owner: string;
+  ownerEmail?: string;
   solutionType?: string;
   submittedBy?: string;
 }
@@ -54,4 +58,12 @@ export interface Invitation {
   proposalId: string;
   status: 'pending' | 'accepted';
   createdAt: string;
+}
+
+export interface AuditLog {
+  id: string;
+  userEmail: string;
+  action: string;
+  timestamp: string;
+  details?: string;
 }

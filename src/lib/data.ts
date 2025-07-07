@@ -1,5 +1,5 @@
 
-import type { Proposal, Template, StorableUser } from './types';
+import type { Proposal, Template, StorableUser, ProposalPriority } from './types';
 
 export const users: StorableUser[] = [
   {
@@ -8,7 +8,8 @@ export const users: StorableUser[] = [
     email: 'admin@proposer.ai',
     role: 'Admin',
     password_bcrypt_hash: 'password123',
-    avatarUrl: 'https://placehold.co/40x40.png'
+    avatarUrl: 'https://placehold.co/40x40.png',
+    mfaEnabled: false,
   },
   {
     id: 'user-manager',
@@ -16,7 +17,8 @@ export const users: StorableUser[] = [
     email: 'manager@proposer.ai',
     role: 'Manager',
     password_bcrypt_hash: 'password123',
-    avatarUrl: 'https://placehold.co/40x40.png'
+    avatarUrl: 'https://placehold.co/40x40.png',
+    mfaEnabled: false,
   },
   {
     id: 'user-approver',
@@ -24,7 +26,8 @@ export const users: StorableUser[] = [
     email: 'approver@proposer.ai',
     role: 'Approver',
     password_bcrypt_hash: 'password123',
-    avatarUrl: 'https://placehold.co/40x40.png'
+    avatarUrl: 'https://placehold.co/40x40.png',
+    mfaEnabled: false,
   },
   {
     id: 'user-editor',
@@ -32,7 +35,8 @@ export const users: StorableUser[] = [
     email: 'editor@proposer.ai',
     role: 'Editor',
     password_bcrypt_hash: 'password123',
-    avatarUrl: 'https://placehold.co/40x40.png'
+    avatarUrl: 'https://placehold.co/40x40.png',
+    mfaEnabled: false,
   },
    {
     id: 'user-reviewer',
@@ -40,7 +44,8 @@ export const users: StorableUser[] = [
     email: 'reviewer@proposer.ai',
     role: 'Reviewer',
     password_bcrypt_hash: 'password123',
-    avatarUrl: 'https://placehold.co/40x40.png'
+    avatarUrl: 'https://placehold.co/40x40.png',
+    mfaEnabled: false,
   },
   {
     id: 'user-viewer',
@@ -48,7 +53,8 @@ export const users: StorableUser[] = [
     email: 'viewer@proposer.ai',
     role: 'Viewer',
     password_bcrypt_hash: 'password123',
-    avatarUrl: 'https://placehold.co/40x40.png'
+    avatarUrl: 'https://placehold.co/40x40.png',
+    mfaEnabled: false,
   }
 ];
 
@@ -58,6 +64,7 @@ export const proposals: Proposal[] = [
     title: 'Project Phoenix - Cloud Migration',
     client: 'Innovate Corp',
     status: 'Submitted',
+    priority: 'High',
     progress: 90,
     lastUpdated: '2 hours ago',
     team: [
@@ -69,7 +76,8 @@ export const proposals: Proposal[] = [
     industry: 'Technology',
     value: 150000,
     region: 'North America',
-    owner: 'Alex Smith',
+    owner: 'Editor User',
+    ownerEmail: 'editor@proposer.ai',
     submittedBy: 'manager@proposer.ai'
   },
   {
@@ -77,6 +85,7 @@ export const proposals: Proposal[] = [
     title: 'Enterprise AI-Powered Chatbot',
     client: 'GlobalBank',
     status: 'Won',
+    priority: 'Medium',
     progress: 100,
     lastUpdated: '1 day ago',
     team: [
@@ -88,13 +97,15 @@ export const proposals: Proposal[] = [
     industry: 'Finance',
     value: 275000,
     region: 'EMEA',
-    owner: 'Brenda Johnson'
+    owner: 'Approver User',
+    ownerEmail: 'approver@proposer.ai'
   },
   {
     id: 'PROP-003',
     title: 'Supply Chain Optimization Platform',
     client: 'QuickShip Logistics',
     status: 'Approved',
+    priority: 'Medium',
     progress: 100,
     lastUpdated: '3 days ago',
     team: [
@@ -105,13 +116,15 @@ export const proposals: Proposal[] = [
     industry: 'Logistics',
     value: 450000,
     region: 'APAC',
-    owner: 'Charles Davis'
+    owner: 'Manager User',
+    ownerEmail: 'manager@proposer.ai'
   },
   {
     id: 'PROP-004',
     title: 'Cybersecurity Threat Analysis',
     client: 'HealthCare Secure',
     status: 'Lost',
+    priority: 'Low',
     progress: 100,
     lastUpdated: '1 week ago',
     team: [
@@ -124,13 +137,15 @@ export const proposals: Proposal[] = [
     industry: 'Healthcare',
     value: 80000,
     region: 'North America',
-    owner: 'Alex Smith'
+    owner: 'Admin User',
+    ownerEmail: 'admin@proposer.ai'
   },
    {
     id: 'PROP-005',
     title: 'Retail Analytics Dashboard',
     client: 'FashionForward',
     status: 'In Review',
+    priority: 'High',
     progress: 60,
     lastUpdated: '2 days ago',
     team: [
@@ -141,13 +156,16 @@ export const proposals: Proposal[] = [
     industry: 'Retail',
     value: 120000,
     region: 'EMEA',
-    owner: 'Brenda Johnson'
+    owner: 'Editor User',
+    ownerEmail: 'editor@proposer.ai',
+    submittedBy: 'manager@proposer.ai'
   },
   {
     id: 'PROP-006',
     title: 'Marketing Automation Setup',
     client: 'StartupX',
     status: 'Draft',
+    priority: 'Medium',
     progress: 20,
     lastUpdated: '5 hours ago',
     team: [
@@ -158,7 +176,8 @@ export const proposals: Proposal[] = [
     industry: 'SaaS',
     value: 50000,
     region: 'North America',
-    owner: 'Alex Smith'
+    owner: 'Editor User',
+    ownerEmail: 'editor@proposer.ai'
   },
 ];
 

@@ -18,12 +18,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { enableMfa } from '@/lib/actions';
 
 function getTitleFromPath(pathname: string): string {
     if (pathname === '/') return 'Dashboard';
     if (pathname.startsWith('/repository')) return 'Proposal Repository';
     if (pathname === '/proposals/new') return 'Create Proposal';
     if (pathname.startsWith('/proposals')) return 'Proposal Workspace';
+    if (pathname.startsWith('/admin/users')) return 'User Management';
+    if (pathname.startsWith('/admin/logs')) return 'Audit Logs';
     return 'ProposerAI';
 }
 
@@ -36,6 +39,21 @@ export default function Header() {
   const { toast } = useToast();
 
   const canCreateProposal = user && ['Admin', 'Approver', 'Manager', 'Editor'].includes(user.role);
+
+  const handleEnableMfa = async () => {
+    if (!user) return;
+    const result = await enableMfa(user.email);
+    if (result.success) {
+      toast({
+        title: "MFA Enabled",
+        description: "For this simulation, your one-time code is always '123456'. This will be active on your next login.",
+        duration: 8000,
+      });
+    } else {
+      toast({ variant: "destructive", title: "Error", description: result.message });
+    }
+  };
+
 
   return (
     <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
@@ -83,6 +101,7 @@ export default function Header() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => toast({ title: "Coming Soon!", description: "The profile page will be available shortly." })}>Profile</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => toast({ title: "Coming Soon!", description: "The settings page will be available shortly." })}>Settings</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleEnableMfa}>Enable MFA</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={logout}>
                     <LogOut className="mr-2 h-4 w-4" />
